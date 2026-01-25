@@ -118,6 +118,8 @@ extern "C"
         // add panels
         win->AddPanel(Pointer<TabPage>(new PCAP::Panels::Information(win->GetObject(), pcap)), true);
         win->AddPanel(Pointer<TabPage>(new PCAP::Panels::Packets(pcap, win)), false);
+        win->AddPanel(Pointer<AppCUI::Controls::TabPage>(new PCAP::Panels::LayerSummary(win->GetObject(), pcap)), false);
+
 
         return true;
     }
