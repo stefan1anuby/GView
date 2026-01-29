@@ -6,7 +6,7 @@ using namespace AppCUI::Controls;
 using namespace AppCUI::OS;
 
 LayerSummary::LayerSummary(Reference<Object> _object, Reference<PCAPFile> _pcap)
-    : TabPage("Layer Summary"), object(_object), pcap(_pcap), general(nullptr), layers(nullptr)
+    : TabPage("FTP Summary"), object(_object), pcap(_pcap), general(nullptr), layers(nullptr)
 {
     // Create the ListView immediately, like Information does
     general = CreateChildControl<ListView>("x:0,y:0,w:100%,h:10", std::initializer_list<ConstString>{ "n:Summary,w:100" }, ListViewFlags::None);
@@ -30,15 +30,12 @@ void LayerSummary::Update()
 
 void LayerSummary::UpdateLayerInformation()
 {
-    if (!layers || !general)
+    if (!general)
         return;
-
-    for (auto& layer : *layers) {
-        if (!layer.name)
-            continue;
-
-        std::string summary = layer.extractionName.empty() ? "<no summary>" : std::string(layer.extractionName);
-        general->AddItem({ summary });
+    for (std::vector<std::string>* layerSummaries : pcap->layerSummaryString) {
+        for (auto it = layerSummaries->begin();it < layerSummaries->end(); it++) {
+            general->AddItem({ *it });
+        }
     }
 }
 

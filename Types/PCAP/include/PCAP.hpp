@@ -6,9 +6,17 @@
 
 namespace GView::Type::PCAP
 {
+namespace Panels
+{
+    using FTP_PANEL_SUMMARY_LINES_TYPE = std::vector<std::string>;
+    class LayerSummary;
+}
 class PCAPFile : public TypeInterface, public View::ContainerViewer::EnumerateInterface, public View::ContainerViewer::OpenItemInterface
 {
   public:
+    Panels::LayerSummary* layerSummary;
+    std::vector<Panels::FTP_PANEL_SUMMARY_LINES_TYPE*> layerSummaryString;
+    // /\/\/\ Should probably be moved, but it works like this.
     Buffer data; // it's maximum 0xFFFF so just save it here
 
     Header header;
@@ -20,7 +28,11 @@ class PCAPFile : public TypeInterface, public View::ContainerViewer::EnumerateIn
 
     PCAPFile();
 
-    ~PCAPFile() override = default;
+    ~PCAPFile() override {
+        for (auto ref : layerSummaryString) {
+            delete ref;
+        }
+    };
 
     bool Update();
 

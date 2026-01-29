@@ -13,6 +13,7 @@ PayloadDataParserInterface* FTP::FTPParser::ParsePayload(const PayloadInformatio
     bool isResponse         = true;
 
     StreamTcpLayer layer = {};
+    Panels::FTP_PANEL_SUMMARY_LINES_TYPE* layerSummaryPanelLines = new std::vector<std::string>();
     for (auto& packet : *payloadInformation.packets)
     {
         // Skip empty payloads
@@ -50,7 +51,7 @@ PayloadDataParserInterface* FTP::FTPParser::ParsePayload(const PayloadInformatio
         bool isRequest = line.rfind("Request: ", 0) == 0;
         if (isRequest) {
             std::string cmdLine = line.substr(9); // remove "Request: "
-            HandleCommand(cmdLine, callbackInterface);
+            HandleCommand(cmdLine, *layerSummaryPanelLines);
         }
 
 
@@ -64,70 +65,72 @@ PayloadDataParserInterface* FTP::FTPParser::ParsePayload(const PayloadInformatio
         isResponse = !isResponse;
     }
 
+    pfile.layerSummaryString.push_back(layerSummaryPanelLines);
+    
     callbackInterface->AddConnectionSummary("parsed application stream layers");
     callbackInterface->AddConnectionAppLayerName("FTP");
     return this;
 
 }
-void HandleUSER(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleUSER(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
     s.user.username     = arg;
     s.expectingPassword = true;
-    cb->AddConnectionSummary("User " + arg + " tried to log in");
+    layerSummaryPanelLines.push_back("User " + arg + " tried to log in");
 }
 
-void HandlePASS(const std::string&, GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandlePASS(const std::string&, GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
     if (!s.expectingPassword)
-        cb->AddConnectionSummary("Password entered without username");
+        layerSummaryPanelLines.push_back("Password entered without username");
     else
-        cb->AddConnectionSummary("User " + s.user.username + " logged in successfully");
+        layerSummaryPanelLines.push_back("User " + s.user.username + " logged in successfully");
 
     s.user.isLoggedIn   = true;
     s.expectingPassword = false;
 }
 
-void HandleACCT(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleACCT(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
-    cb->AddConnectionSummary("User " + s.user.username + " provided account information");
+    layerSummaryPanelLines.push_back("User " + s.user.username + " provided account information");
 }
 
-void HandleCWD(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleCWD(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
     if (!s.user.isLoggedIn)
-        cb->AddConnectionSummary("User " + s.user.username + " tried to change directory before logging in");
+        layerSummaryPanelLines.push_back("User " + s.user.username + " tried to change directory before logging in");
     else
-        cb->AddConnectionSummary("User " + s.user.username + " changed working directory to " + arg);
+        layerSummaryPanelLines.push_back("User " + s.user.username + " changed working directory to " + arg);
 
     s.user.cwd = arg;
 }
 
-void HandleCDUP(GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleCDUP(GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
     s.user.cwd = "/";
-    cb->AddConnectionSummary("User " + s.user.username + " moved to parent directory");
+    layerSummaryPanelLines.push_back("User " + s.user.username + " moved to parent directory");
 }
 
-void HandleSMNT(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleSMNT(const std::string& arg, GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
-    cb->AddConnectionSummary("User " + s.user.username + " mounted " + arg);
+    layerSummaryPanelLines.push_back("User " + s.user.username + " mounted " + arg);
 }
 
-void HandleREIN(GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleREIN(GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
     s = GView::Type::PCAP::FTP::FtpSession{};
-    cb->AddConnectionSummary("User session reset");
+    layerSummaryPanelLines.push_back("User session reset");
 }
 
-void HandleQUIT(GView::Type::PCAP::FTP::FtpSession& s, ConnectionCallbackInterface* cb)
+void HandleQUIT(GView::Type::PCAP::FTP::FtpSession& s, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
-    cb->AddConnectionSummary("User " + s.user.username + " logged out");
+    layerSummaryPanelLines.push_back("User " + s.user.username + " logged out");
     s = GView::Type::PCAP::FTP::FtpSession{};
 }
 
 
 
-void GView::Type::PCAP::FTP::FTPParser::HandleCommand(const std::string& line, ConnectionCallbackInterface* cb)
+void GView::Type::PCAP::FTP::FTPParser::HandleCommand(const std::string& line, Panels::FTP_PANEL_SUMMARY_LINES_TYPE& layerSummaryPanelLines)
 {
     static FtpSession session;
 
@@ -141,21 +144,21 @@ void GView::Type::PCAP::FTP::FTPParser::HandleCommand(const std::string& line, C
     std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
     if (cmd == "USER")
-        HandleUSER(arg, session, cb);
+        HandleUSER(arg, session, layerSummaryPanelLines);
     else if (cmd == "PASS")
-        HandlePASS(arg, session, cb);
+        HandlePASS(arg, session, layerSummaryPanelLines);
     else if (cmd == "ACCT")
-        HandleACCT(arg, session, cb);
+        HandleACCT(arg, session, layerSummaryPanelLines);
     else if (cmd == "CWD")
-        HandleCWD(arg, session, cb);
+        HandleCWD(arg, session, layerSummaryPanelLines);
     else if (cmd == "CDUP")
-        HandleCDUP(session, cb);
+        HandleCDUP(session, layerSummaryPanelLines);
     else if (cmd == "SMNT")
-        HandleSMNT(arg, session, cb);
+        HandleSMNT(arg, session, layerSummaryPanelLines);
     else if (cmd == "REIN")
-        HandleREIN(session, cb);
+        HandleREIN(session, layerSummaryPanelLines);
     else if (cmd == "QUIT")
-        HandleQUIT(session, cb);
+        HandleQUIT(session, layerSummaryPanelLines);
 }
 
 
