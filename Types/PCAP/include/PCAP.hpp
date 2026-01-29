@@ -6,9 +6,17 @@
 
 namespace GView::Type::PCAP
 {
+namespace Panels
+{
+    using FTP_PANEL_SUMMARY_LINES_TYPE = std::vector<std::string>;
+    class LayerSummary;
+}
 class PCAPFile : public TypeInterface, public View::ContainerViewer::EnumerateInterface, public View::ContainerViewer::OpenItemInterface
 {
   public:
+    Panels::LayerSummary* layerSummary;
+    std::vector<Panels::FTP_PANEL_SUMMARY_LINES_TYPE*> layerSummaryString;
+    // /\/\/\ Should probably be moved, but it works like this.
     Buffer data; // it's maximum 0xFFFF so just save it here
 
     Header header;
@@ -20,7 +28,11 @@ class PCAPFile : public TypeInterface, public View::ContainerViewer::EnumerateIn
 
     PCAPFile();
 
-    ~PCAPFile() override = default;
+    ~PCAPFile() override {
+        for (auto ref : layerSummaryString) {
+            delete ref;
+        }
+    };
 
     bool Update();
 
@@ -153,6 +165,35 @@ namespace Panels
         bool OnUpdateCommandBar(Application::CommandBar& commandBar) override;
         bool OnEvent(Reference<Control> ctrl, Event evnt, int controlID) override;
     };
+    class LayerSummary : public AppCUI::Controls::TabPage
+    {
+        Reference<Object> object;
+        Reference<GView::Type::PCAP::PCAPFile> pcap;
+        Reference<AppCUI::Controls::ListView> general;
+        std::vector<GView::Type::PCAP::StreamTcpLayer>* layers = nullptr;
+
+      public:
+        // Constructor
+        LayerSummary(Reference<Object> _object, Reference<GView::Type::PCAP::PCAPFile> _pcap);
+
+        // Set which packet's layers we want to display
+        void SetLayers(std::vector<StreamTcpLayer>& l);
+
+        // Clear existing messages/items
+        void Clear();
+
+        // Add a single summary message
+        void AddMessage(const std::string& msg);
+
+        // Refresh the panel (populate from layers)
+        void Update();
+
+      private:
+        void UpdateLayerInformation();
+        void RecomputePanelsPositions();
+    };
+
+
 
     class Packets : public AppCUI::Controls::TabPage
     {

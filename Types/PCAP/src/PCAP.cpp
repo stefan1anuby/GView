@@ -108,7 +108,7 @@ extern "C"
         auto pcap = win->GetObject()->GetContentType<PCAP::PCAPFile>();
         pcap->InitStreamManager(win);
         pcap->RegisterPayloadParser(std::make_unique<PCAP::HTTP::HTTPParser>());
-        pcap->RegisterPayloadParser(std::make_unique<PCAP::FTP::FTPParser>());
+        pcap->RegisterPayloadParser(std::make_unique<PCAP::FTP::FTPParser>(pcap));
         pcap->Update();
 
         // add views
@@ -116,9 +116,13 @@ extern "C"
         CreateBufferView(win, pcap);
 
         // add panels
+        pcap->layerSummary = new PCAP::Panels::LayerSummary(win->GetObject(), pcap);
         win->AddPanel(Pointer<TabPage>(new PCAP::Panels::Information(win->GetObject(), pcap)), true);
+        win->AddPanel(Pointer<TabPage>(pcap->layerSummary), true);
         win->AddPanel(Pointer<TabPage>(new PCAP::Panels::Packets(pcap, win)), false);
 
+        pcap->layerSummary->Update();
+    
         return true;
     }
 
